@@ -68,9 +68,9 @@ class Decoder(nn.Module):
 
         self.embedding = nn.Embedding(tgt_vocab, emb_dim)
 
-        self.rnn = nn.LSTM((enc_hidden_dim * 2) + emb_dim, dec_hidden_dim, bidirectional=False)
+        self.rnn = nn.LSTM((enc_hidden_dim * 4) + emb_dim, dec_hidden_dim, bidirectional=False)
 
-        self.fc = nn.Linear((enc_hidden_dim * 2) + emb_dim + dec_hidden_dim, self.output_dim)
+        self.fc = nn.Linear((enc_hidden_dim * 4) + emb_dim + dec_hidden_dim, self.output_dim)
 
         self.dropout = nn.Dropout(dropout)
 
@@ -118,7 +118,8 @@ class Decoder(nn.Module):
         # hidden_weighted --> [1, batch size, enc hidden dim * 2]
         # cell_weighted --> [1, batch size, enc hidden dim * 2]
 
-        rnn_input = torch.cat((embedded, hidden_weighted), dim=2)
+        rnn_input = torch.cat((embedded, hidden_weighted, cell_weighted), dim=2)
+        # rnn_input = torch.cat((embedded, hidden_weighted), dim=2)
         # rnn_input --> [1, batch size, (enc hidden dim * 2) + emb dim]
 
         output, (hidden, cell) = self.rnn(rnn_input, (hidden.unsqueeze(0), cell.unsqueeze(0)))
@@ -132,8 +133,10 @@ class Decoder(nn.Module):
         embedded = embedded.squeeze(0)
         output = output.squeeze(0)
         hidden_weighted = hidden_weighted.squeeze(0)
+        cell_weighted = cell_weighted.squeeze(0)
 
-        prediction = self.fc(torch.cat((embedded, output, hidden_weighted), dim=1))
+        prediction = self.fc(torch.cat((embedded, output, hidden_weighted, cell_weighted), dim=1))
+        # prediction = self.fc(torch.cat((embedded, output, hidden_weighted), dim=1))
         # prediction --> [batch size, output dim]
 
         return prediction, (hidden.squeeze(0), cell.squeeze(0)), hidden_a.squeeze(1)
